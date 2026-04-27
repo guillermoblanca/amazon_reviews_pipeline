@@ -1,0 +1,20 @@
+# =============================================================================
+# requirements.txt — Dependencias del pipeline de análisis de sentimiento
+# =============================================================================
+
+# Motor de procesamiento distribuido (incluye MLlib para ML)
+pyspark==3.5.1
+
+# Manipulación de datos y operaciones vectoriales
+pandas==2.2.2
+numpy==1.26.4
+
+# Visualizaciones para el reporte de evaluación
+matplotlib==3.9.0
+seaborn==0.13.2
+
+# Métricas adicionales de scikit-learn (para curvas ROC y clasificación)
+scikit-learn==1.5.0
+
+# Logging estructurado
+loguru==0.7.2

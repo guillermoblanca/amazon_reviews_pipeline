@@ -1,0 +1,61 @@
+# =============================================================================
+# docker-compose.yml — Amazon Reviews Sentiment Analysis
+#
+# USO:
+#   docker-compose up --build          → construye la imagen y ejecuta el pipeline
+#   docker-compose up                  → reutiliza imagen ya construida
+#   docker-compose down                → elimina el contenedor
+#
+# El pipeline completo se ejecuta automáticamente al iniciar el contenedor.
+# Los resultados (modelo + métricas) quedan persistidos en ./models y ./outputs.
+# =============================================================================
+
+services:
+  sentiment-pipeline:
+    # -------------------------------------------------------------------------
+    # Imagen construida desde el Dockerfile local
+    # -------------------------------------------------------------------------
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: amazon_sentiment_pipeline
+
+    # -------------------------------------------------------------------------
+    # Volúmenes: monta datos locales → contenedor y persiste salidas
+    # -------------------------------------------------------------------------
+    volumes:
+      - ./data:/app/data:ro          # CSV de entrada (solo lectura)
+      - ./models:/app/models         # Modelo PySpark exportado
+      - ./outputs:/app/outputs       # Métricas, reportes y visualizaciones
+
+    # -------------------------------------------------------------------------
+    # Variables de entorno configurables sin tocar el código
+    # -------------------------------------------------------------------------
+    environment:
+      # Ruta al dataset dentro del contenedor
+      - DATA_PATH=/app/data/Amazon_Reviews.csv
+      # Modo Spark: local[*] usa todos los cores del host
+      - SPARK_MASTER=local[*]
+      # Umbral de rating para label positivo (>= 4 → positivo)
+      - POSITIVE_RATING_THRESHOLD=4
+      # Umbral de rating para label negativo (<= 2 → negativo)
+      - NEGATIVE_RATING_THRESHOLD=2
+      # Proporción del dataset para test (0.2 = 20%)
+      - TEST_SPLIT_RATIO=0.2
+      # Semilla aleatoria para reproducibilidad
+      - RANDOM_SEED=42
+      # Número de folds para cross-validation
+      - CV_FOLDS=3
+
+    # -------------------------------------------------------------------------
+    # Límites de recursos (ajustar según RAM disponible en el host)
+    # -------------------------------------------------------------------------
+    mem_limit: 4g
+    cpus: "2.0"
+
+    # -------------------------------------------------------------------------
+    # El contenedor termina una vez concluye el pipeline (no es un servicio
+    # permanente); restart: no evita reinicios automáticos no deseados
+    # -------------------------------------------------------------------------
+    restart: "no"
