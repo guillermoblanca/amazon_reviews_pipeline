@@ -1,0 +1,68 @@
+# =============================================================================
+# .gitignore — Amazon Reviews Sentiment Analysis Pipeline
+# =============================================================================
+
+# ── Datos (no subir el dataset original ni datos intermedios) ───────────────
+data/
+*.csv
+*.parquet
+*.json.gz
+
+# ── Modelo entrenado (artefacto pesado, se regenera con docker-compose up) ──
+models/
+
+# ── Outputs generados (imágenes y métricas se regeneran en cada ejecución) ──
+outputs/
+# Excepción: se puede querer versionar un reporte de ejemplo
+!outputs/.gitkeep
+
+# ── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.whl
+
+# Entornos virtuales locales (si alguien corre el proyecto sin Docker)
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# ── Jupyter (si se añaden notebooks de exploración) ─────────────────────────
+notebooks/.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ── IDEs y editores ──────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Spark temporales ─────────────────────────────────────────────────────────
+derby.log
+metastore_db/
+spark-warehouse/
+
+# ── Docker ───────────────────────────────────────────────────────────────────
+# No ignorar docker-compose.yml ni Dockerfile, son parte del proyecto
+.dockerenv
+
+# ── Variables de entorno con secretos ────────────────────────────────────────
+.env
+.env.local
+.env.*.local

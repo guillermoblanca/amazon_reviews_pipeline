@@ -2,7 +2,7 @@
 
 Pipeline de análisis de sentimiento end-to-end sobre ~21.000 reseñas de Amazon, construido con **PySpark MLlib** y empaquetado en **Docker** para ejecutarse con un único comando.
 
-**Stack:** Python 3.11 · PySpark 3.5 · MLlib · Docker · TF-IDF · Logistic Regression
+**Stack:** Python 3.11 · PySpark 3.5 · MLlib · FastAPI · Docker · TF-IDF · Logistic Regression
 
 ---
 
@@ -22,17 +22,29 @@ Pipeline de análisis de sentimiento end-to-end sobre ~21.000 reseñas de Amazon
 
 ## Ejecución
 
-```bash
-docker-compose up --build
-```
-
-Primera ejecución: ~5–10 min (construye la imagen). Posteriores: ~2–5 min.
-
-Los resultados quedan en el directorio local `./outputs/` y el modelo en `./models/`.
+El proyecto tiene tres servicios Docker independientes con responsabilidades separadas:
 
 ```bash
-docker-compose down   # limpia el contenedor al terminar
+# 1. Entrenar el modelo (genera ./models/ y ./outputs/)
+docker-compose run --rm pipeline
+
+# 2. Levantar la API de inferencia en producción/app/models/sentiment_model.joblib
+docker-compose up api
+#    → Documentación interactiva: http://localhost:8000/docs
+#    → Health check:              http://localhost:8000/health
+
+# 3. Exportar modelo ligero y lanzar demo Gradio local
+docker-compose run --rm export       # genera ./models/sentiment_model.joblib
+docker-compose up demo               # → http://localhost:7860
+
+# 4. Ejecutar la suite de tests completa
+docker-compose run --rm tests
+
+# Limpiar todos los contenedores
+docker-compose down
 ```
+
+Primera ejecución: ~5–10 min (construye la imagen + descarga dependencias). Posteriores: ~2–5 min.
 
 ---
 
@@ -42,10 +54,13 @@ docker-compose down   # limpia el contenedor al terminar
 2. [Phase 1 — Ingesta](#2-phase-1--ingesta)
 3. [Phase 2 — Transformación y Feature Engineering](#3-phase-2--transformación-y-feature-engineering)
 4. [Phase 3 — Entrenamiento del Modelo](#4-phase-3--entrenamiento-del-modelo)
-5. [Phase 5 — Evaluación y Resultados](#5-phase-4--evaluación-y-resultados)
-6. [Decisiones Técnicas](#6-decisiones-técnicas)
-7. [Configuración](#7-configuración)
-8. [Requisitos y Estructura](#8-requisitos-y-estructura)
+5. [Phase 4 — Evaluación y Resultados](#5-phase-4--evaluación-y-resultados)
+6. [API de Inferencia en Producción](#6-api-de-inferencia-en-producción)
+7. [Suite de Tests](#7-suite-de-tests)
+8. [Demo en HuggingFace Spaces](#8-demo-en-huggingface-spaces)
+8. [Decisiones Técnicas](#8-decisiones-técnicas)
+9. [Configuración](#9-configuración)
+10. [Requisitos y Estructura](#10-requisitos-y-estructura)
 
 ---
 
@@ -286,7 +301,200 @@ La separación clara entre ambas distribuciones confirma que el modelo está bie
 
 ---
 
-## 6. Decisiones Técnicas
+## 6. API de Inferencia en Producción
+
+**Archivo:** `src/api.py` · **Schemas:** `src/schemas.py`
+
+Una vez entrenado el modelo, la API lo expone como servicio REST con los endpoints estándar de producción empresarial. Levantarla con `docker-compose up api`.
+
+### Endpoints
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| `GET` | `/health` | Liveness probe para Kubernetes / load balancers |
+| `GET` | `/model/info` | Metadatos del modelo activo (auditoría) |
+| `POST` | `/predict` | Clasificar una review individual |
+| `POST` | `/predict/batch` | Clasificar hasta 100 reviews en paralelo |
+
+Documentación interactiva (Swagger UI) disponible en **http://localhost:8000/docs** cuando la API está levantada.
+
+### Ejemplo: clasificar una review
+
+```bash
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Best laptop I have ever owned",
+    "text": "Fast, reliable and the battery lasts all day. Completely worth the price."
+  }'
+```
+
+```json
+{
+  "sentiment": "positive",
+  "label": 1,
+  "confidence": 0.9821,
+  "probabilities": {
+    "positive": 0.9821,
+    "negative": 0.0179
+  }
+}
+```
+
+### Ejemplo: clasificar múltiples reviews (batch)
+
+```bash
+curl -X POST http://localhost:8000/predict/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reviews": [
+      {"title": "Amazing", "text": "Works perfectly, very happy with my purchase."},
+      {"title": "Terrible", "text": "Broke after two days, complete waste of money."}
+    ]
+  }'
+```
+
+```json
+{
+  "predictions": [
+    {"sentiment": "positive", "label": 1, "confidence": 0.9654, "probabilities": {"positive": 0.9654, "negative": 0.0346}},
+    {"sentiment": "negative", "label": 0, "confidence": 0.9877, "probabilities": {"positive": 0.0123, "negative": 0.9877}}
+  ],
+  "total": 2,
+  "positive_count": 1,
+  "negative_count": 1,
+  "positive_ratio": 0.5
+}
+```
+
+### Protocolo de producción implementado
+
+- **Singleton de modelo:** el `PipelineModel` y la `SparkSession` se cargan una sola vez en el startup y persisten entre peticiones (no hay overhead de JVM por request)
+- **Validación de esquema:** Pydantic rechaza automáticamente peticiones malformadas con `422 Unprocessable Entity` antes de llegar al modelo
+- **Gestión de ciclo de vida:** el lifespan de FastAPI garantiza que los recursos se liberan correctamente en el shutdown, incluso ante errores
+- **Health check:** el endpoint `/health` reporta si el modelo está cargado y Spark activo, compatible con readiness/liveness probes de Kubernetes
+
+---
+
+## 7. Suite de Tests
+
+**Directorio:** `tests/`
+
+```bash
+# Ejecutar la suite completa
+docker-compose run --rm tests
+
+# Ejecutar solo tests unitarios (rápidos, sin modelo)
+docker-compose run --rm tests pytest tests/test_transform.py -v
+
+# Ejecutar tests de la API
+docker-compose run --rm tests pytest tests/test_api.py -v
+
+# Ejecutar tests de regresión del modelo (golden set)
+docker-compose run --rm tests pytest tests/test_model_quality.py -v
+```
+
+### Estructura de la suite
+
+| Archivo | Tipo | Qué verifica |
+|---|---|---|
+| `test_transform.py` | **Unitario** | Cada función de Phase 2 de forma aislada |
+| `test_api.py` | **Integración** | Todos los endpoints: códigos HTTP, esquemas, validaciones |
+| `test_model_quality.py` | **Regresión** | El modelo supera umbrales mínimos sobre el golden set |
+
+### Golden Set (`tests/data/sample_reviews.json`)
+
+Conjunto de 14 reviews con etiquetas conocidas, divididas por categoría:
+
+| Categoría | Reviews | Uso |
+|---|---|---|
+| `clear_positive` | 5 | El modelo DEBE clasificarlas todas como positivas |
+| `clear_negative` | 5 | El modelo DEBE clasificarlas todas como negativas |
+| `edge_case` | 4 | Casos límite: sin título, texto muy corto, lenguaje mixto |
+
+**Gate de calidad:** si `test_model_quality.py` falla, el modelo no debe desplegarse a producción. Este es el mismo patrón que usan empresas como Spotify, Netflix o Airbnb para sus pipelines de ML.
+
+### Umbrales de regresión
+
+| Test | Umbral | Modelo actual |
+|---|---|---|
+| Accuracy sobre golden set | > 80% | ~94% |
+| Confianza en casos claros | > 65% | ~98% |
+| Todos los `clear_positive` correctos | 100% | ✅ |
+| Todos los `clear_negative` correctos | 100% | ✅ |
+
+---
+
+## 8. Demo en HuggingFace Spaces
+
+**Directorio:** `gradio_app/`
+
+La demo interactiva permite probar el modelo con cualquier review de Amazon desde el navegador, sin instalar nada.
+
+### ¿Por qué no usar el modelo PySpark directamente?
+
+HuggingFace Spaces no tiene Java y tiene restricciones de RAM/CPU que hacen PySpark inviable como runtime de servicio. El patrón correcto en empresas es:
+
+```
+Entrena a escala (PySpark)  →  Exporta ligero (sklearn joblib)  →  Sirve sin JVM (Gradio/FastAPI)
+```
+
+El modelo exportado usa `TfidfVectorizer + LogisticRegression` de scikit-learn, funcionalmente equivalente al pipeline PySpark pero sin ninguna dependencia de Java.
+
+### Paso 1 — Exportar el modelo
+
+```bash
+docker-compose run --rm export
+# Genera: ./models/sentiment_model.joblib (~5-10 MB)
+# Métricas del modelo sklearn comparadas con PySpark se muestran en consola
+```
+
+### Paso 2 — Probar la demo localmente
+
+```bash
+docker-compose up demo
+# → http://localhost:7860
+```
+
+La demo local usa la misma imagen que HuggingFace Spaces. Si funciona aquí, funciona en el Space.
+
+### Paso 3 — Publicar en HuggingFace Spaces
+
+```bash
+# Copiar el modelo al directorio del Space
+cp models/sentiment_model.joblib gradio_app/
+
+# Instalar la CLI de HuggingFace (solo la primera vez)
+pip install huggingface_hub
+
+# Login con tu token de HuggingFace
+huggingface-cli login
+
+# Crear el Space y subir
+cd gradio_app
+git init
+git add .
+git commit -m "Add Amazon Reviews sentiment demo"
+huggingface-cli repo create amazon-sentiment --type space --space_sdk gradio
+git remote add origin https://huggingface.co/spaces/<TU_USERNAME>/amazon-sentiment
+git push -u origin main
+```
+
+El Space quedará en: `https://huggingface.co/spaces/<TU_USERNAME>/amazon-sentiment`
+
+### Interfaz de la demo
+
+| Pestaña | Funcionalidad |
+|---|---|
+| **🔍 Single Review** | Escribe título + texto → obtén sentimiento + barra de confianza |
+| **📊 Batch Analysis** | Pega varias reviews (una por línea) → tabla de resultados con ratio positivo/negativo |
+| **ℹ️ About** | Explicación del pipeline de entrenamiento y decisiones técnicas |
+
+Incluye 6 ejemplos pre-cargados de reviews reales de Amazon para probar directamente.
+
+---
+
+## 9. Decisiones Técnicas
 
 ### ¿Por qué PySpark y no Pandas + scikit-learn?
 
@@ -318,7 +526,7 @@ Un único split puede producir una partición de validación con distribución d
 
 ---
 
-## 7. Configuración
+## 10. Configuración
 
 Todos los parámetros del modelo se externalizan en `docker-compose.yml` sin tocar el código:
 
@@ -352,7 +560,7 @@ predictions.select("review_combined", "prediction", "probability").show(truncate
 
 ---
 
-## 8. Requisitos y Estructura
+## 11. Requisitos y Estructura
 
 ### Requisitos
 
@@ -368,15 +576,32 @@ etl_project/
 ├── Dockerfile                        # Python 3.11 + OpenJDK 17
 ├── docker-compose.yml                # Configuración de servicios y volúmenes
 ├── docker-entrypoint.sh              # Detecta JAVA_HOME dinámicamente
-├── requirements.txt                  # PySpark, sklearn, matplotlib, seaborn
+├── requirements.txt                  # PySpark, FastAPI, pytest, sklearn, matplotlib
+├── pytest.ini                        # Configuración de la suite de tests
 ├── run_pipeline.py                   # Orquestador: ejecuta las 4 fases
 ├── data/
 │   └── Amazon_Reviews.csv
 ├── src/
+│   ├── schemas.py                    # Contratos Pydantic de la API (request/response)
+│   ├── api.py                        # FastAPI: endpoints de inferencia en producción
+│   ├── export_lightweight.py         # Exporta modelo PySpark → sklearn/joblib
 │   ├── phase1_ingest.py              # Ingesta con PySpark
 │   ├── phase2_transform.py           # Transformación y etiquetado
 │   ├── phase3_train.py               # Entrenamiento con MLlib
 │   └── phase4_evaluate.py            # Evaluación y visualizaciones
+├── gradio_app/                       # Demo interactiva → HuggingFace Spaces
+│   ├── app.py                        # Interfaz Gradio (3 pestañas)
+│   ├── inference.py                  # Inferencia sklearn sin PySpark
+│   ├── requirements.txt              # Deps ligeras: gradio + sklearn + joblib
+│   └── README.md                     # Config YAML de HuggingFace Spaces
+├── Dockerfile.gradio                 # Imagen ligera para demo (sin Java)
+├── tests/
+│   ├── conftest.py                   # Fixtures compartidas (SparkSession, API client)
+│   ├── test_transform.py             # Tests unitarios de Phase 2
+│   ├── test_api.py                   # Tests de integración de la API
+│   ├── test_model_quality.py         # Tests de regresión (golden set)
+│   └── data/
+│       └── sample_reviews.json       # 14 reviews con etiquetas conocidas
 ├── models/
 │   └── sentiment_model/              # Modelo PySpark serializado (generado)
 └── outputs/
@@ -396,4 +621,8 @@ etl_project/
 | OpenJDK | 17 | Runtime de Java para Spark |
 | scikit-learn | 1.5.0 | Métricas de evaluación |
 | Matplotlib / Seaborn | 3.9 / 0.13 | Visualizaciones |
+| FastAPI | 0.111 | API de inferencia en producción |
+| Uvicorn | 0.30 | Servidor ASGI para la API |
+| Gradio | 4.36 | Demo interactiva en HuggingFace Spaces |
+| pytest | 8.2 | Suite de tests |
 | Docker | ≥ 24 | Contenedorización y reproducibilidad |

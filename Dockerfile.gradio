@@ -1,0 +1,36 @@
+# =============================================================================
+# Dockerfile.gradio — Imagen ligera para la demo Gradio / HuggingFace Spaces
+#
+# SIN Java · SIN PySpark · ~300 MB vs ~1.5 GB de la imagen principal
+# Solo necesita: Python + scikit-learn + gradio + joblib
+#
+# Este Dockerfile es el equivalente local al entorno de HuggingFace Spaces.
+# Si la demo funciona aquí, funcionará en el Space sin cambios.
+# =============================================================================
+
+FROM python:3.11-slim
+
+LABEL description="Gradio demo for Amazon Reviews Sentiment Analysis"
+
+WORKDIR /app
+
+# Instalar dependencias sin caché para mantener la imagen pequeña
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copiar código de la aplicación
+COPY inference.py .
+COPY app.py .
+
+# El modelo se monta como volumen desde ./models/sentiment_model.joblib
+# En HuggingFace Spaces se copia directamente al repositorio del Space
+
+# Gradio lee GRADIO_SERVER_NAME para saber a qué interfaz bindear Y para hacer
+# el check de accesibilidad post-arranque. Sin esta variable, el check se hace
+# contra "localhost" que puede fallar dentro de Docker con ciertos drivers de red.
+ENV GRADIO_SERVER_NAME=0.0.0.0
+ENV GRADIO_SERVER_PORT=7860
+
+EXPOSE 7860
+
+CMD ["python", "app.py"]

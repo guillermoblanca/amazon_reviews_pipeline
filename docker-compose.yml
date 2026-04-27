@@ -1,61 +1,158 @@
 # =============================================================================
 # docker-compose.yml — Amazon Reviews Sentiment Analysis
 #
-# USO:
-#   docker-compose up --build          → construye la imagen y ejecuta el pipeline
-#   docker-compose up                  → reutiliza imagen ya construida
-#   docker-compose down                → elimina el contenedor
+# SERVICIOS:
+#   pipeline  → entrena el modelo PySpark (se ejecuta y termina)
+#   export    → exporta el modelo a formato sklearn/joblib para HuggingFace
+#   api       → sirve el modelo PySpark como REST API (servicio persistente)
+#   demo      → lanza la demo Gradio local (puerto 7860)
+#   tests     → ejecuta la suite de tests completa
 #
-# El pipeline completo se ejecuta automáticamente al iniciar el contenedor.
-# Los resultados (modelo + métricas) quedan persistidos en ./models y ./outputs.
+# FLUJO DE TRABAJO COMPLETO:
+#
+#   1. Entrenar el modelo PySpark:
+#      docker-compose run --rm pipeline
+#
+#   2. Exportar modelo ligero para HuggingFace Spaces:
+#      docker-compose run --rm export
+#      → Genera: ./models/sentiment_model.joblib
+#
+#   3a. Levantar demo Gradio local:
+#      docker-compose up demo
+#      → http://localhost:7860
+#
+#   3b. O levantar la API REST de producción:
+#      docker-compose up api
+#      → http://localhost:8000/docs
+#
+#   4. Ejecutar todos los tests:
+#      docker-compose run --rm tests
+#
+#   5. Publicar en HuggingFace Spaces (fuera de Docker):
+#      cp models/sentiment_model.joblib gradio_app/
+#      cd gradio_app && git init && huggingface-cli repo create <nombre>
+#      git add . && git commit -m "Add model" && git push
+#
+#   6. Limpiar contenedores:
+#      docker-compose down
 # =============================================================================
 
+x-base: &base
+  build:
+    context: .
+    dockerfile: Dockerfile
+  volumes:
+    - ./models:/app/models
+    - ./outputs:/app/outputs
+  environment:
+    - SPARK_MASTER=local[*]
+    - MODEL_PATH=/app/models/sentiment_model
+  mem_limit: 4g
+  cpus: "2.0"
+
+
 services:
-  sentiment-pipeline:
-    # -------------------------------------------------------------------------
-    # Imagen construida desde el Dockerfile local
-    # -------------------------------------------------------------------------
-    build:
-      context: .
-      dockerfile: Dockerfile
 
+  # ---------------------------------------------------------------------------
+  # pipeline — Phase 1→4: entrena y evalúa el modelo
+  # Ejecutar con: docker-compose run --rm pipeline
+  # ---------------------------------------------------------------------------
+  pipeline:
+    <<: *base
     container_name: amazon_sentiment_pipeline
-
-    # -------------------------------------------------------------------------
-    # Volúmenes: monta datos locales → contenedor y persiste salidas
-    # -------------------------------------------------------------------------
     volumes:
-      - ./data:/app/data:ro          # CSV de entrada (solo lectura)
-      - ./models:/app/models         # Modelo PySpark exportado
-      - ./outputs:/app/outputs       # Métricas, reportes y visualizaciones
-
-    # -------------------------------------------------------------------------
-    # Variables de entorno configurables sin tocar el código
-    # -------------------------------------------------------------------------
+      - ./data:/app/data:ro
+      - ./models:/app/models
+      - ./outputs:/app/outputs
     environment:
-      # Ruta al dataset dentro del contenedor
       - DATA_PATH=/app/data/Amazon_Reviews.csv
-      # Modo Spark: local[*] usa todos los cores del host
       - SPARK_MASTER=local[*]
-      # Umbral de rating para label positivo (>= 4 → positivo)
       - POSITIVE_RATING_THRESHOLD=4
-      # Umbral de rating para label negativo (<= 2 → negativo)
       - NEGATIVE_RATING_THRESHOLD=2
-      # Proporción del dataset para test (0.2 = 20%)
       - TEST_SPLIT_RATIO=0.2
-      # Semilla aleatoria para reproducibilidad
       - RANDOM_SEED=42
-      # Número de folds para cross-validation
       - CV_FOLDS=3
+    entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
+    command: ["python", "run_pipeline.py"]
+    restart: "no"
 
-    # -------------------------------------------------------------------------
-    # Límites de recursos (ajustar según RAM disponible en el host)
-    # -------------------------------------------------------------------------
-    mem_limit: 4g
-    cpus: "2.0"
+  # ---------------------------------------------------------------------------
+  # api — REST API de inferencia en producción (servicio persistente)
+  # Ejecutar con: docker-compose up api
+  # Documentación:  http://localhost:8000/docs
+  # Health check:   http://localhost:8000/health
+  # ---------------------------------------------------------------------------
+  api:
+    <<: *base
+    container_name: amazon_sentiment_api
+    entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
+    command: [
+      "uvicorn", "src.api:app",
+      "--host", "0.0.0.0",
+      "--port", "8000",
+      "--log-level", "warning"
+    ]
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s    # La JVM de Spark tarda ~30s en arrancar
+    restart: unless-stopped
 
-    # -------------------------------------------------------------------------
-    # El contenedor termina una vez concluye el pipeline (no es un servicio
-    # permanente); restart: no evita reinicios automáticos no deseados
-    # -------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # export — Exporta el modelo PySpark a sklearn/joblib para HuggingFace
+  # Ejecutar con: docker-compose run --rm export
+  # Genera: ./models/sentiment_model.joblib (~5-10 MB)
+  # ---------------------------------------------------------------------------
+  export:
+    <<: *base
+    container_name: amazon_sentiment_export
+    volumes:
+      - ./data:/app/data:ro
+      - ./models:/app/models
+    environment:
+      - DATA_PATH=/app/data/Amazon_Reviews.csv
+      - RANDOM_SEED=42
+      - POSITIVE_RATING_THRESHOLD=4
+      - NEGATIVE_RATING_THRESHOLD=2
+    entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
+    command: ["python", "src/export_lightweight.py"]
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # demo — Demo Gradio local para probar el modelo exportado
+  # Ejecutar con: docker-compose up demo
+  # Acceder en:   http://localhost:7860
+  # Requiere: haber ejecutado primero 'docker-compose run --rm export'
+  # ---------------------------------------------------------------------------
+  demo:
+    build:
+      context: gradio_app
+      dockerfile: ../Dockerfile.gradio
+    container_name: amazon_sentiment_demo
+    volumes:
+      - ./models/sentiment_model.joblib:/app/sentiment_model.joblib:ro
+    ports:
+      - "7860:7860"
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # tests — Suite de tests de pytest (unit + integración + regresión)
+  # Ejecutar con: docker-compose run --rm tests
+  # Para un módulo específico: docker-compose run --rm tests pytest tests/test_api.py -v
+  # ---------------------------------------------------------------------------
+  tests:
+    <<: *base
+    container_name: amazon_sentiment_tests
+    volumes:
+      - ./models:/app/models:ro
+      - ./outputs:/app/outputs:ro
+      - ./tests:/app/tests:ro
+      - ./src:/app/src:ro
+      - ./pytest.ini:/app/pytest.ini:ro
+    entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
+    command: ["pytest", "tests/", "-v", "--tb=short"]
     restart: "no"

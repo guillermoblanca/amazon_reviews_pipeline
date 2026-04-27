@@ -18,3 +18,15 @@ scikit-learn==1.5.0
 
 # Logging estructurado
 loguru==0.7.2
+
+# ── API de inferencia en producción ──────────────────────────────────────────
+# Servidor ASGI de alto rendimiento (comparable a Flask pero async-native)
+fastapi==0.111.0
+# Servidor ASGI para producción
+uvicorn[standard]==0.30.1
+
+# ── Suite de tests ────────────────────────────────────────────────────────────
+# Framework de tests
+pytest==8.2.1
+# Cliente HTTP para tests de integración (usado por FastAPI TestClient)
+httpx==0.27.0

@@ -1,0 +1,21 @@
+# =============================================================================
+# gradio_app/requirements.txt — Dependencias de HuggingFace Spaces
+# =============================================================================
+# Estas son las ÚNICAS dependencias necesarias para servir el modelo.
+# Sin PySpark ni Java: el modelo exportado (joblib) corre con sklearn solo.
+# HuggingFace Spaces instala estas dependencias automáticamente al hacer push.
+# =============================================================================
+
+# Interfaz web interactiva
+gradio==4.36.1
+huggingface_hub>=0.19.3,<1.0
+
+# FORZAR versiones de backend para evitar el error 'unhashable type: dict'
+fastapi==0.110.3
+starlette==0.37.2
+jinja2==3.1.3
+
+# Inferencia del modelo exportado
+scikit-learn==1.5.0
+joblib==1.4.2
+pandas==2.2.2

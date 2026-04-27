@@ -133,3 +133,474 @@
 2026-04-27 08:26:16 | INFO     | 
 2026-04-27 08:26:16 | INFO     |   Modelo guardado en ./models/sentiment_model/
 2026-04-27 08:26:16 | INFO     | ============================================================
+2026-04-27 09:01:02 | INFO     | 
+2026-04-27 09:01:02 | INFO     | ============================================================
+2026-04-27 09:01:02 | INFO     |   AMAZON REVIEWS — SENTIMENT ANALYSIS PIPELINE
+2026-04-27 09:01:02 | INFO     |   Tecnologías: PySpark MLlib · TF-IDF · Logistic Regression
+2026-04-27 09:01:02 | INFO     | ============================================================
+2026-04-27 09:01:02 | INFO     |   Dataset   : /app/data/Amazon_Reviews.csv
+2026-04-27 09:01:02 | INFO     |   Spark     : local[*]
+2026-04-27 09:01:02 | INFO     | ============================================================
+2026-04-27 09:01:02 | INFO     | 
+2026-04-27 09:01:02 | INFO     | ▶ PHASE 1 — Ingesta de datos
+2026-04-27 09:01:05 | INFO     | Leyendo dataset desde: /app/data/Amazon_Reviews.csv
+2026-04-27 09:01:08 | INFO     | Esquema validado correctamente. Columnas: ['Reviewer Name', 'Profile Link', 'Country', 'Review Count', 'Review Date', 'Rating', 'Review Title', 'Review Text', 'Date of Experience']
+2026-04-27 09:01:09 | INFO     | ============================================================
+2026-04-27 09:01:09 | INFO     | ESTADÍSTICAS DEL DATASET CRUDO
+2026-04-27 09:01:09 | INFO     | ============================================================
+2026-04-27 09:01:09 | INFO     |   Filas totales : 21,055
+2026-04-27 09:01:09 | INFO     |   Columnas      : 9
+2026-04-27 09:01:10 | INFO     |   Valores nulos / vacíos en columnas clave:
+2026-04-27 09:01:10 | INFO     |     Rating              : 0 (0.0%)
+2026-04-27 09:01:10 | INFO     |     Review Text         : 0 (0.0%)
+2026-04-27 09:01:10 | INFO     |     Review Title        : 0 (0.0%)
+2026-04-27 09:01:10 | INFO     |   Distribución de ratings (valores crudos):
+2026-04-27 09:01:12 | INFO     | ============================================================
+2026-04-27 09:01:12 | INFO     |   Phase 1 completada en 9.8s
+
+2026-04-27 09:01:12 | INFO     | ▶ PHASE 2 — Transformación y feature engineering
+2026-04-27 09:01:12 | INFO     | Iniciando transformaciones del dataset...
+2026-04-27 09:01:12 | INFO     | Rating parseado: columna 'rating_numeric' creada.
+2026-04-27 09:01:12 | INFO     | Etiquetas asignadas: >= 4 stars → Positivo (1), <= 2 stars → Negativo (0), resto → Excluido
+2026-04-27 09:01:12 | INFO     | Texto normalizado: columnas 'text_clean' y 'title_clean' creadas.
+2026-04-27 09:01:12 | INFO     | Campos combinados en 'review_combined': título + cuerpo de review.
+2026-04-27 09:01:14 | INFO     | Filas eliminadas (nulas/vacías/neutras): 885 → Dataset limpio: 20,170 filas
+2026-04-27 09:01:16 | INFO     | ============================================================
+2026-04-27 09:01:16 | INFO     | ESTADÍSTICAS DESPUÉS DE TRANSFORMACIÓN
+2026-04-27 09:01:16 | INFO     | ============================================================
+2026-04-27 09:01:16 | INFO     |   Total de ejemplos para entrenamiento: 20,170
+2026-04-27 09:01:16 | INFO     |   Distribución de clases:
+2026-04-27 09:01:16 | INFO     |     Negativo (0): 14,350 (71.1%)
+2026-04-27 09:01:16 | INFO     |     Positivo (1): 5,820 (28.9%)
+2026-04-27 09:01:16 | INFO     | ============================================================
+2026-04-27 09:01:16 | INFO     |   Phase 2 completada en 4.7s
+
+2026-04-27 09:01:16 | INFO     | ▶ PHASE 3 — Entrenamiento del modelo (TF-IDF + Logistic Regression)
+2026-04-27 09:01:16 | INFO     | ============================================================
+2026-04-27 09:01:16 | INFO     | DIVISIÓN DEL DATASET
+2026-04-27 09:01:16 | INFO     | ============================================================
+2026-04-27 09:01:18 | INFO     |   Train (80%): 16,188 filas
+2026-04-27 09:01:20 | INFO     |   Test  (20%): 3,982 filas
+2026-04-27 09:01:20 | INFO     |   Semilla aleatoria: 42
+2026-04-27 09:01:20 | INFO     | ============================================================
+2026-04-27 09:01:20 | INFO     | Pipeline ML construido: Tokenizer → StopWordsRemover → HashingTF → IDF → LogisticRegression
+2026-04-27 09:01:20 | INFO     | Iniciando Cross-Validation (3 folds, 4 combinaciones)...
+2026-04-27 09:01:20 | INFO     | Esto puede tardar 2-5 minutos dependiendo del hardware disponible.
+2026-04-27 09:02:23 | INFO     | ============================================================
+2026-04-27 09:02:23 | INFO     | RESULTADOS CROSS-VALIDATION (AUC-ROC promedio)
+2026-04-27 09:02:23 | INFO     | ============================================================
+2026-04-27 09:02:23 | INFO     |   [1] regParam=0.010 | elasticNet=0.0 → AUC-ROC: 0.9761
+2026-04-27 09:02:23 | INFO     |   [2] regParam=0.010 | elasticNet=0.5 → AUC-ROC: 0.9712
+2026-04-27 09:02:23 | INFO     |   [3] regParam=0.100 | elasticNet=0.0 → AUC-ROC: 0.9762 ← MEJOR
+2026-04-27 09:02:23 | INFO     |   [4] regParam=0.100 | elasticNet=0.5 → AUC-ROC: 0.8998
+2026-04-27 09:02:23 | INFO     | 
+  Hiperparámetros finales: regParam=0.1, elasticNetParam=0.0
+2026-04-27 09:02:23 | INFO     | ============================================================
+2026-04-27 09:02:23 | INFO     | Mejor modelo seleccionado por Cross-Validation.
+2026-04-27 09:02:23 | INFO     | Guardando modelo en: /app/models/sentiment_model
+2026-04-27 09:02:28 | INFO     | Modelo guardado correctamente.
+2026-04-27 09:02:28 | INFO     |   Phase 3 completada en 72.1s
+
+2026-04-27 09:02:28 | INFO     | ▶ PHASE 4 — Evaluación y generación de reporte
+2026-04-27 09:02:28 | INFO     | Generando predicciones sobre el conjunto de test...
+2026-04-27 09:02:30 | INFO     | Predicciones generadas para 3,982 ejemplos de test.
+2026-04-27 09:02:30 | INFO     | Recolectando predicciones en el driver para calcular métricas...
+2026-04-27 09:02:33 | INFO     | Métricas guardadas en: /app/outputs/metrics.json
+2026-04-27 09:02:33 | INFO     | Matriz de confusión guardada en: /app/outputs/confusion_matrix.png
+2026-04-27 09:02:33 | INFO     | Curva ROC guardada en: /app/outputs/roc_curve.png
+2026-04-27 09:02:35 | INFO     | Distribución de probabilidades guardada en: /app/outputs/probability_distribution.png
+2026-04-27 09:02:35 | INFO     | 
+2026-04-27 09:02:35 | INFO     | ============================================================
+2026-04-27 09:02:35 | INFO     |   REPORTE FINAL — MODELO DE SENTIMIENTO
+2026-04-27 09:02:35 | INFO     | ============================================================
+2026-04-27 09:02:35 | INFO     |   Samples de test    : 3,982
+2026-04-27 09:02:35 | INFO     |   Positivos reales   : 1,122
+2026-04-27 09:02:35 | INFO     |   Negativos reales   : 2,860
+2026-04-27 09:02:35 | INFO     |   ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─
+2026-04-27 09:02:35 | INFO     |   Accuracy           : 0.9432  (94.3%)
+2026-04-27 09:02:35 | INFO     |   Precision          : 0.9308
+2026-04-27 09:02:35 | INFO     |   Recall             : 0.8627
+2026-04-27 09:02:35 | INFO     |   F1-Score           : 0.8955
+2026-04-27 09:02:35 | INFO     |   AUC-ROC            : 0.9774
+2026-04-27 09:02:35 | INFO     |   ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─
+2026-04-27 09:02:35 | INFO     |   Veredicto          : BUENO — Sólido para uso en producción
+2026-04-27 09:02:35 | INFO     | ============================================================
+2026-04-27 09:02:35 | INFO     |   Artefactos generados en /app/outputs/:
+2026-04-27 09:02:35 | INFO     |     · metrics.json
+2026-04-27 09:02:35 | INFO     |     · confusion_matrix.png
+2026-04-27 09:02:35 | INFO     |     · roc_curve.png
+2026-04-27 09:02:35 | INFO     |     · probability_distribution.png
+2026-04-27 09:02:35 | INFO     | ============================================================
+2026-04-27 09:02:35 | INFO     |   Phase 4 completada en 6.9s
+
+2026-04-27 09:02:35 | INFO     | ============================================================
+2026-04-27 09:02:35 | INFO     |   Pipeline completado en 93.5s (1.6 min)
+2026-04-27 09:02:35 | INFO     |   F1-Score final: 0.8955
+2026-04-27 09:02:35 | INFO     |   AUC-ROC final : 0.9774
+2026-04-27 09:02:35 | INFO     | ============================================================
+2026-04-27 09:02:35 | INFO     | 
+2026-04-27 09:02:35 | INFO     |   Artefactos disponibles en el host (directorio ./outputs/):
+2026-04-27 09:02:35 | INFO     |     · pipeline.log          → log completo de ejecución
+2026-04-27 09:02:35 | INFO     |     · metrics.json          → métricas del modelo
+2026-04-27 09:02:35 | INFO     |     · confusion_matrix.png  → matriz de confusión
+2026-04-27 09:02:35 | INFO     |     · roc_curve.png         → curva ROC
+2026-04-27 09:02:35 | INFO     |     · probability_distribution.png → calibración del modelo
+2026-04-27 09:02:35 | INFO     | 
+2026-04-27 09:02:35 | INFO     |   Modelo guardado en ./models/sentiment_model/
+2026-04-27 09:02:35 | INFO     | ============================================================
+2026-04-27 09:18:36 | INFO     | 
+2026-04-27 09:18:36 | INFO     | ============================================================
+2026-04-27 09:18:36 | INFO     |   AMAZON REVIEWS — SENTIMENT ANALYSIS PIPELINE
+2026-04-27 09:18:36 | INFO     |   Tecnologías: PySpark MLlib · TF-IDF · Logistic Regression
+2026-04-27 09:18:36 | INFO     | ============================================================
+2026-04-27 09:18:36 | INFO     |   Dataset   : /app/data/Amazon_Reviews.csv
+2026-04-27 09:18:36 | INFO     |   Spark     : local[*]
+2026-04-27 09:18:36 | INFO     | ============================================================
+2026-04-27 09:18:36 | INFO     | 
+2026-04-27 09:18:36 | INFO     | ▶ PHASE 1 — Ingesta de datos
+2026-04-27 09:18:39 | INFO     | Leyendo dataset desde: /app/data/Amazon_Reviews.csv
+2026-04-27 09:18:42 | INFO     | Esquema validado correctamente. Columnas: ['Reviewer Name', 'Profile Link', 'Country', 'Review Count', 'Review Date', 'Rating', 'Review Title', 'Review Text', 'Date of Experience']
+2026-04-27 09:18:44 | INFO     | ============================================================
+2026-04-27 09:18:44 | INFO     | ESTADÍSTICAS DEL DATASET CRUDO
+2026-04-27 09:18:44 | INFO     | ============================================================
+2026-04-27 09:18:44 | INFO     |   Filas totales : 21,055
+2026-04-27 09:18:44 | INFO     |   Columnas      : 9
+2026-04-27 09:18:45 | INFO     |   Valores nulos / vacíos en columnas clave:
+2026-04-27 09:18:45 | INFO     |     Rating              : 0 (0.0%)
+2026-04-27 09:18:45 | INFO     |     Review Text         : 0 (0.0%)
+2026-04-27 09:18:45 | INFO     |     Review Title        : 0 (0.0%)
+2026-04-27 09:18:45 | INFO     |   Distribución de ratings (valores crudos):
+2026-04-27 09:18:47 | INFO     | ============================================================
+2026-04-27 09:18:47 | INFO     |   Phase 1 completada en 11.0s
+
+2026-04-27 09:18:47 | INFO     | ▶ PHASE 2 — Transformación y feature engineering
+2026-04-27 09:18:47 | INFO     | Iniciando transformaciones del dataset...
+2026-04-27 09:18:47 | INFO     | Rating parseado: columna 'rating_numeric' creada.
+2026-04-27 09:18:47 | INFO     | Etiquetas asignadas: >= 4 stars → Positivo (1), <= 2 stars → Negativo (0), resto → Excluido
+2026-04-27 09:18:47 | INFO     | Texto normalizado: columnas 'text_clean' y 'title_clean' creadas.
+2026-04-27 09:18:47 | INFO     | Campos combinados en 'review_combined': título + cuerpo de review.
+2026-04-27 09:18:49 | INFO     | Filas eliminadas (nulas/vacías/neutras): 885 → Dataset limpio: 20,170 filas
+2026-04-27 09:18:52 | INFO     | ============================================================
+2026-04-27 09:18:52 | INFO     | ESTADÍSTICAS DESPUÉS DE TRANSFORMACIÓN
+2026-04-27 09:18:52 | INFO     | ============================================================
+2026-04-27 09:18:52 | INFO     |   Total de ejemplos para entrenamiento: 20,170
+2026-04-27 09:18:52 | INFO     |   Distribución de clases:
+2026-04-27 09:18:52 | INFO     |     Negativo (0): 14,350 (71.1%)
+2026-04-27 09:18:52 | INFO     |     Positivo (1): 5,820 (28.9%)
+2026-04-27 09:18:52 | INFO     | ============================================================
+2026-04-27 09:18:52 | INFO     |   Phase 2 completada en 5.1s
+
+2026-04-27 09:18:52 | INFO     | ▶ PHASE 3 — Entrenamiento del modelo (TF-IDF + Logistic Regression)
+2026-04-27 09:18:52 | INFO     | ============================================================
+2026-04-27 09:18:52 | INFO     | DIVISIÓN DEL DATASET
+2026-04-27 09:18:52 | INFO     | ============================================================
+2026-04-27 09:18:54 | INFO     |   Train (80%): 16,188 filas
+2026-04-27 09:18:56 | INFO     |   Test  (20%): 3,982 filas
+2026-04-27 09:18:56 | INFO     |   Semilla aleatoria: 42
+2026-04-27 09:18:56 | INFO     | ============================================================
+2026-04-27 09:18:56 | INFO     | Pipeline ML construido: Tokenizer → StopWordsRemover → HashingTF → IDF → LogisticRegression
+2026-04-27 09:18:56 | INFO     | Iniciando Cross-Validation (3 folds, 4 combinaciones)...
+2026-04-27 09:18:56 | INFO     | Esto puede tardar 2-5 minutos dependiendo del hardware disponible.
+2026-04-27 09:20:03 | INFO     | ============================================================
+2026-04-27 09:20:03 | INFO     | RESULTADOS CROSS-VALIDATION (AUC-ROC promedio)
+2026-04-27 09:20:03 | INFO     | ============================================================
+2026-04-27 09:20:03 | INFO     |   [1] regParam=0.010 | elasticNet=0.0 → AUC-ROC: 0.9761
+2026-04-27 09:20:03 | INFO     |   [2] regParam=0.010 | elasticNet=0.5 → AUC-ROC: 0.9712
+2026-04-27 09:20:03 | INFO     |   [3] regParam=0.100 | elasticNet=0.0 → AUC-ROC: 0.9762 ← MEJOR
+2026-04-27 09:20:03 | INFO     |   [4] regParam=0.100 | elasticNet=0.5 → AUC-ROC: 0.8998
+2026-04-27 09:20:03 | INFO     | 
+  Hiperparámetros finales: regParam=0.1, elasticNetParam=0.0
+2026-04-27 09:20:03 | INFO     | ============================================================
+2026-04-27 09:20:03 | INFO     | Mejor modelo seleccionado por Cross-Validation.
+2026-04-27 09:20:03 | INFO     | Guardando modelo en: /app/models/sentiment_model
+2026-04-27 09:20:08 | INFO     | Modelo guardado correctamente.
+2026-04-27 09:20:08 | INFO     |   Phase 3 completada en 75.6s
+
+2026-04-27 09:20:08 | INFO     | ▶ PHASE 4 — Evaluación y generación de reporte
+2026-04-27 09:20:08 | INFO     | Generando predicciones sobre el conjunto de test...
+2026-04-27 09:20:09 | INFO     | Predicciones generadas para 3,982 ejemplos de test.
+2026-04-27 09:20:09 | INFO     | Recolectando predicciones en el driver para calcular métricas...
+2026-04-27 09:20:12 | INFO     | Métricas guardadas en: /app/outputs/metrics.json
+2026-04-27 09:20:12 | INFO     | Matriz de confusión guardada en: /app/outputs/confusion_matrix.png
+2026-04-27 09:20:12 | INFO     | Curva ROC guardada en: /app/outputs/roc_curve.png
+2026-04-27 09:20:14 | INFO     | Distribución de probabilidades guardada en: /app/outputs/probability_distribution.png
+2026-04-27 09:20:14 | INFO     | 
+2026-04-27 09:20:14 | INFO     | ============================================================
+2026-04-27 09:20:14 | INFO     |   REPORTE FINAL — MODELO DE SENTIMIENTO
+2026-04-27 09:20:14 | INFO     | ============================================================
+2026-04-27 09:20:14 | INFO     |   Samples de test    : 3,982
+2026-04-27 09:20:14 | INFO     |   Positivos reales   : 1,122
+2026-04-27 09:20:14 | INFO     |   Negativos reales   : 2,860
+2026-04-27 09:20:14 | INFO     |   ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─
+2026-04-27 09:20:14 | INFO     |   Accuracy           : 0.9432  (94.3%)
+2026-04-27 09:20:14 | INFO     |   Precision          : 0.9308
+2026-04-27 09:20:14 | INFO     |   Recall             : 0.8627
+2026-04-27 09:20:14 | INFO     |   F1-Score           : 0.8955
+2026-04-27 09:20:14 | INFO     |   AUC-ROC            : 0.9774
+2026-04-27 09:20:14 | INFO     |   ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─
+2026-04-27 09:20:14 | INFO     |   Veredicto          : BUENO — Sólido para uso en producción
+2026-04-27 09:20:14 | INFO     | ============================================================
+2026-04-27 09:20:14 | INFO     |   Artefactos generados en /app/outputs/:
+2026-04-27 09:20:14 | INFO     |     · metrics.json
+2026-04-27 09:20:14 | INFO     |     · confusion_matrix.png
+2026-04-27 09:20:14 | INFO     |     · roc_curve.png
+2026-04-27 09:20:14 | INFO     |     · probability_distribution.png
+2026-04-27 09:20:14 | INFO     | ============================================================
+2026-04-27 09:20:14 | INFO     |   Phase 4 completada en 6.6s
+
+2026-04-27 09:20:14 | INFO     | ============================================================
+2026-04-27 09:20:14 | INFO     |   Pipeline completado en 98.3s (1.6 min)
+2026-04-27 09:20:14 | INFO     |   F1-Score final: 0.8955
+2026-04-27 09:20:14 | INFO     |   AUC-ROC final : 0.9774
+2026-04-27 09:20:14 | INFO     | ============================================================
+2026-04-27 09:20:14 | INFO     | 
+2026-04-27 09:20:14 | INFO     |   Artefactos disponibles en el host (directorio ./outputs/):
+2026-04-27 09:20:14 | INFO     |     · pipeline.log          → log completo de ejecución
+2026-04-27 09:20:14 | INFO     |     · metrics.json          → métricas del modelo
+2026-04-27 09:20:14 | INFO     |     · confusion_matrix.png  → matriz de confusión
+2026-04-27 09:20:14 | INFO     |     · roc_curve.png         → curva ROC
+2026-04-27 09:20:14 | INFO     |     · probability_distribution.png → calibración del modelo
+2026-04-27 09:20:14 | INFO     | 
+2026-04-27 09:20:14 | INFO     |   Modelo guardado en ./models/sentiment_model/
+2026-04-27 09:20:14 | INFO     | ============================================================
+2026-04-27 09:22:04 | INFO     | 
+2026-04-27 09:22:04 | INFO     | ============================================================
+2026-04-27 09:22:04 | INFO     |   AMAZON REVIEWS — SENTIMENT ANALYSIS PIPELINE
+2026-04-27 09:22:04 | INFO     |   Tecnologías: PySpark MLlib · TF-IDF · Logistic Regression
+2026-04-27 09:22:04 | INFO     | ============================================================
+2026-04-27 09:22:04 | INFO     |   Dataset   : /app/data/Amazon_Reviews.csv
+2026-04-27 09:22:04 | INFO     |   Spark     : local[*]
+2026-04-27 09:22:04 | INFO     | ============================================================
+2026-04-27 09:22:04 | INFO     | 
+2026-04-27 09:22:04 | INFO     | ▶ PHASE 1 — Ingesta de datos
+2026-04-27 09:22:07 | INFO     | Leyendo dataset desde: /app/data/Amazon_Reviews.csv
+2026-04-27 09:34:02 | INFO     | 
+2026-04-27 09:34:02 | INFO     | ============================================================
+2026-04-27 09:34:02 | INFO     |   AMAZON REVIEWS — SENTIMENT ANALYSIS PIPELINE
+2026-04-27 09:34:02 | INFO     |   Tecnologías: PySpark MLlib · TF-IDF · Logistic Regression
+2026-04-27 09:34:02 | INFO     | ============================================================
+2026-04-27 09:34:02 | INFO     |   Dataset   : /app/data/Amazon_Reviews.csv
+2026-04-27 09:34:02 | INFO     |   Spark     : local[*]
+2026-04-27 09:34:02 | INFO     | ============================================================
+2026-04-27 09:34:02 | INFO     | 
+2026-04-27 09:34:02 | INFO     | ▶ PHASE 1 — Ingesta de datos
+2026-04-27 09:34:05 | INFO     | Leyendo dataset desde: /app/data/Amazon_Reviews.csv
+2026-04-27 09:34:08 | INFO     | Esquema validado correctamente. Columnas: ['Reviewer Name', 'Profile Link', 'Country', 'Review Count', 'Review Date', 'Rating', 'Review Title', 'Review Text', 'Date of Experience']
+2026-04-27 09:34:09 | INFO     | ============================================================
+2026-04-27 09:34:09 | INFO     | ESTADÍSTICAS DEL DATASET CRUDO
+2026-04-27 09:34:09 | INFO     | ============================================================
+2026-04-27 09:34:09 | INFO     |   Filas totales : 21,055
+2026-04-27 09:34:09 | INFO     |   Columnas      : 9
+2026-04-27 09:34:10 | INFO     |   Valores nulos / vacíos en columnas clave:
+2026-04-27 09:34:10 | INFO     |     Rating              : 0 (0.0%)
+2026-04-27 09:34:10 | INFO     |     Review Text         : 0 (0.0%)
+2026-04-27 09:34:10 | INFO     |     Review Title        : 0 (0.0%)
+2026-04-27 09:34:10 | INFO     |   Distribución de ratings (valores crudos):
+2026-04-27 09:34:11 | INFO     | ============================================================
+2026-04-27 09:34:11 | INFO     |   Phase 1 completada en 8.8s
+
+2026-04-27 09:34:11 | INFO     | ▶ PHASE 2 — Transformación y feature engineering
+2026-04-27 09:34:11 | INFO     | Iniciando transformaciones del dataset...
+2026-04-27 09:34:11 | INFO     | Rating parseado: columna 'rating_numeric' creada.
+2026-04-27 09:34:11 | INFO     | Etiquetas asignadas: >= 4 stars → Positivo (1), <= 2 stars → Negativo (0), resto → Excluido
+2026-04-27 09:34:11 | INFO     | Texto normalizado: columnas 'text_clean' y 'title_clean' creadas.
+2026-04-27 09:34:11 | INFO     | Campos combinados en 'review_combined': título + cuerpo de review.
+2026-04-27 09:34:13 | INFO     | Filas eliminadas (nulas/vacías/neutras): 885 → Dataset limpio: 20,170 filas
+2026-04-27 09:34:16 | INFO     | ============================================================
+2026-04-27 09:34:16 | INFO     | ESTADÍSTICAS DESPUÉS DE TRANSFORMACIÓN
+2026-04-27 09:34:16 | INFO     | ============================================================
+2026-04-27 09:34:16 | INFO     |   Total de ejemplos para entrenamiento: 20,170
+2026-04-27 09:34:16 | INFO     |   Distribución de clases:
+2026-04-27 09:34:16 | INFO     |     Negativo (0): 14,350 (71.1%)
+2026-04-27 09:34:16 | INFO     |     Positivo (1): 5,820 (28.9%)
+2026-04-27 09:34:16 | INFO     | ============================================================
+2026-04-27 09:34:16 | INFO     |   Phase 2 completada en 4.5s
+
+2026-04-27 09:34:16 | INFO     | ▶ PHASE 3 — Entrenamiento del modelo (TF-IDF + Logistic Regression)
+2026-04-27 09:34:16 | INFO     | ============================================================
+2026-04-27 09:34:16 | INFO     | DIVISIÓN DEL DATASET
+2026-04-27 09:34:16 | INFO     | ============================================================
+2026-04-27 09:34:17 | INFO     |   Train (80%): 16,188 filas
+2026-04-27 09:34:19 | INFO     |   Test  (20%): 3,982 filas
+2026-04-27 09:34:19 | INFO     |   Semilla aleatoria: 42
+2026-04-27 09:34:19 | INFO     | ============================================================
+2026-04-27 09:34:19 | INFO     | Pipeline ML construido: Tokenizer → StopWordsRemover → HashingTF → IDF → LogisticRegression
+2026-04-27 09:34:19 | INFO     | Iniciando Cross-Validation (3 folds, 4 combinaciones)...
+2026-04-27 09:34:19 | INFO     | Esto puede tardar 2-5 minutos dependiendo del hardware disponible.
+2026-04-27 09:35:21 | INFO     | ============================================================
+2026-04-27 09:35:21 | INFO     | RESULTADOS CROSS-VALIDATION (AUC-ROC promedio)
+2026-04-27 09:35:21 | INFO     | ============================================================
+2026-04-27 09:35:21 | INFO     |   [1] regParam=0.010 | elasticNet=0.0 → AUC-ROC: 0.9761
+2026-04-27 09:35:21 | INFO     |   [2] regParam=0.010 | elasticNet=0.5 → AUC-ROC: 0.9712
+2026-04-27 09:35:21 | INFO     |   [3] regParam=0.100 | elasticNet=0.0 → AUC-ROC: 0.9762 ← MEJOR
+2026-04-27 09:35:21 | INFO     |   [4] regParam=0.100 | elasticNet=0.5 → AUC-ROC: 0.8998
+2026-04-27 09:35:21 | INFO     | 
+  Hiperparámetros finales: regParam=0.1, elasticNetParam=0.0
+2026-04-27 09:35:21 | INFO     | ============================================================
+2026-04-27 09:35:21 | INFO     | Mejor modelo seleccionado por Cross-Validation.
+2026-04-27 09:35:21 | INFO     | Guardando modelo en: /app/models/sentiment_model
+2026-04-27 09:35:26 | INFO     | Modelo guardado correctamente.
+2026-04-27 09:35:26 | INFO     |   Phase 3 completada en 70.6s
+
+2026-04-27 09:35:26 | INFO     | ▶ PHASE 4 — Evaluación y generación de reporte
+2026-04-27 09:35:26 | INFO     | Generando predicciones sobre el conjunto de test...
+2026-04-27 09:35:28 | INFO     | Predicciones generadas para 3,982 ejemplos de test.
+2026-04-27 09:35:28 | INFO     | Recolectando predicciones en el driver para calcular métricas...
+2026-04-27 09:35:31 | INFO     | Métricas guardadas en: /app/outputs/metrics.json
+2026-04-27 09:35:31 | INFO     | Matriz de confusión guardada en: /app/outputs/confusion_matrix.png
+2026-04-27 09:35:31 | INFO     | Curva ROC guardada en: /app/outputs/roc_curve.png
+2026-04-27 09:35:33 | INFO     | Distribución de probabilidades guardada en: /app/outputs/probability_distribution.png
+2026-04-27 09:35:33 | INFO     | 
+2026-04-27 09:35:33 | INFO     | ============================================================
+2026-04-27 09:35:33 | INFO     |   REPORTE FINAL — MODELO DE SENTIMIENTO
+2026-04-27 09:35:33 | INFO     | ============================================================
+2026-04-27 09:35:33 | INFO     |   Samples de test    : 3,982
+2026-04-27 09:35:33 | INFO     |   Positivos reales   : 1,122
+2026-04-27 09:35:33 | INFO     |   Negativos reales   : 2,860
+2026-04-27 09:35:33 | INFO     |   ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─
+2026-04-27 09:35:33 | INFO     |   Accuracy           : 0.9432  (94.3%)
+2026-04-27 09:35:33 | INFO     |   Precision          : 0.9308
+2026-04-27 09:35:33 | INFO     |   Recall             : 0.8627
+2026-04-27 09:35:33 | INFO     |   F1-Score           : 0.8955
+2026-04-27 09:35:33 | INFO     |   AUC-ROC            : 0.9774
+2026-04-27 09:35:33 | INFO     |   ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─
+2026-04-27 09:35:33 | INFO     |   Veredicto          : BUENO — Sólido para uso en producción
+2026-04-27 09:35:33 | INFO     | ============================================================
+2026-04-27 09:35:33 | INFO     |   Artefactos generados en /app/outputs/:
+2026-04-27 09:35:33 | INFO     |     · metrics.json
+2026-04-27 09:35:33 | INFO     |     · confusion_matrix.png
+2026-04-27 09:35:33 | INFO     |     · roc_curve.png
+2026-04-27 09:35:33 | INFO     |     · probability_distribution.png
+2026-04-27 09:35:33 | INFO     | ============================================================
+2026-04-27 09:35:33 | INFO     |   Phase 4 completada en 6.7s
+
+2026-04-27 09:35:33 | INFO     | ============================================================
+2026-04-27 09:35:33 | INFO     |   Pipeline completado en 90.7s (1.5 min)
+2026-04-27 09:35:33 | INFO     |   F1-Score final: 0.8955
+2026-04-27 09:35:33 | INFO     |   AUC-ROC final : 0.9774
+2026-04-27 09:35:33 | INFO     | ============================================================
+2026-04-27 09:35:33 | INFO     | 
+2026-04-27 09:35:33 | INFO     |   Artefactos disponibles en el host (directorio ./outputs/):
+2026-04-27 09:35:33 | INFO     |     · pipeline.log          → log completo de ejecución
+2026-04-27 09:35:33 | INFO     |     · metrics.json          → métricas del modelo
+2026-04-27 09:35:33 | INFO     |     · confusion_matrix.png  → matriz de confusión
+2026-04-27 09:35:33 | INFO     |     · roc_curve.png         → curva ROC
+2026-04-27 09:35:33 | INFO     |     · probability_distribution.png → calibración del modelo
+2026-04-27 09:35:33 | INFO     | 
+2026-04-27 09:35:33 | INFO     |   Modelo guardado en ./models/sentiment_model/
+2026-04-27 09:35:33 | INFO     | ============================================================
+2026-04-27 09:41:54 | INFO     | 
+2026-04-27 09:41:54 | INFO     | ============================================================
+2026-04-27 09:41:54 | INFO     |   AMAZON REVIEWS — SENTIMENT ANALYSIS PIPELINE
+2026-04-27 09:41:54 | INFO     |   Tecnologías: PySpark MLlib · TF-IDF · Logistic Regression
+2026-04-27 09:41:54 | INFO     | ============================================================
+2026-04-27 09:41:54 | INFO     |   Dataset   : /app/data/Amazon_Reviews.csv
+2026-04-27 09:41:54 | INFO     |   Spark     : local[*]
+2026-04-27 09:41:54 | INFO     | ============================================================
+2026-04-27 09:41:54 | INFO     | 
+2026-04-27 09:41:54 | INFO     | ▶ PHASE 1 — Ingesta de datos
+2026-04-27 09:41:56 | INFO     | Leyendo dataset desde: /app/data/Amazon_Reviews.csv
+2026-04-27 09:41:59 | INFO     | Esquema validado correctamente. Columnas: ['Reviewer Name', 'Profile Link', 'Country', 'Review Count', 'Review Date', 'Rating', 'Review Title', 'Review Text', 'Date of Experience']
+2026-04-27 09:42:00 | INFO     | ============================================================
+2026-04-27 09:42:00 | INFO     | ESTADÍSTICAS DEL DATASET CRUDO
+2026-04-27 09:42:00 | INFO     | ============================================================
+2026-04-27 09:42:00 | INFO     |   Filas totales : 21,055
+2026-04-27 09:42:00 | INFO     |   Columnas      : 9
+2026-04-27 09:42:01 | INFO     |   Valores nulos / vacíos en columnas clave:
+2026-04-27 09:42:01 | INFO     |     Rating              : 0 (0.0%)
+2026-04-27 09:42:01 | INFO     |     Review Text         : 0 (0.0%)
+2026-04-27 09:42:01 | INFO     |     Review Title        : 0 (0.0%)
+2026-04-27 09:42:01 | INFO     |   Distribución de ratings (valores crudos):
+2026-04-27 09:42:02 | INFO     | ============================================================
+2026-04-27 09:42:02 | INFO     |   Phase 1 completada en 7.8s
+
+2026-04-27 09:42:02 | INFO     | ▶ PHASE 2 — Transformación y feature engineering
+2026-04-27 09:42:02 | INFO     | Iniciando transformaciones del dataset...
+2026-04-27 09:42:02 | INFO     | Rating parseado: columna 'rating_numeric' creada.
+2026-04-27 09:42:02 | INFO     | Etiquetas asignadas: >= 4 stars → Positivo (1), <= 2 stars → Negativo (0), resto → Excluido
+2026-04-27 09:42:02 | INFO     | Texto normalizado: columnas 'text_clean' y 'title_clean' creadas.
+2026-04-27 09:42:02 | INFO     | Campos combinados en 'review_combined': título + cuerpo de review.
+2026-04-27 09:42:04 | INFO     | Filas eliminadas (nulas/vacías/neutras): 885 → Dataset limpio: 20,170 filas
+2026-04-27 09:42:07 | INFO     | ============================================================
+2026-04-27 09:42:07 | INFO     | ESTADÍSTICAS DESPUÉS DE TRANSFORMACIÓN
+2026-04-27 09:42:07 | INFO     | ============================================================
+2026-04-27 09:42:07 | INFO     |   Total de ejemplos para entrenamiento: 20,170
+2026-04-27 09:42:07 | INFO     |   Distribución de clases:
+2026-04-27 09:42:07 | INFO     |     Negativo (0): 14,350 (71.1%)
+2026-04-27 09:42:07 | INFO     |     Positivo (1): 5,820 (28.9%)
+2026-04-27 09:42:07 | INFO     | ============================================================
+2026-04-27 09:42:07 | INFO     |   Phase 2 completada en 4.5s
+
+2026-04-27 09:42:07 | INFO     | ▶ PHASE 3 — Entrenamiento del modelo (TF-IDF + Logistic Regression)
+2026-04-27 09:42:07 | INFO     | ============================================================
+2026-04-27 09:42:07 | INFO     | DIVISIÓN DEL DATASET
+2026-04-27 09:42:07 | INFO     | ============================================================
+2026-04-27 09:42:08 | INFO     |   Train (80%): 16,188 filas
+2026-04-27 09:42:10 | INFO     |   Test  (20%): 3,982 filas
+2026-04-27 09:42:10 | INFO     |   Semilla aleatoria: 42
+2026-04-27 09:42:10 | INFO     | ============================================================
+2026-04-27 09:42:10 | INFO     | Pipeline ML construido: Tokenizer → StopWordsRemover → HashingTF → IDF → LogisticRegression
+2026-04-27 09:42:10 | INFO     | Iniciando Cross-Validation (3 folds, 4 combinaciones)...
+2026-04-27 09:42:10 | INFO     | Esto puede tardar 2-5 minutos dependiendo del hardware disponible.
+2026-04-27 09:43:11 | INFO     | ============================================================
+2026-04-27 09:43:11 | INFO     | RESULTADOS CROSS-VALIDATION (AUC-ROC promedio)
+2026-04-27 09:43:11 | INFO     | ============================================================
+2026-04-27 09:43:11 | INFO     |   [1] regParam=0.010 | elasticNet=0.0 → AUC-ROC: 0.9761
+2026-04-27 09:43:11 | INFO     |   [2] regParam=0.010 | elasticNet=0.5 → AUC-ROC: 0.9712
+2026-04-27 09:43:11 | INFO     |   [3] regParam=0.100 | elasticNet=0.0 → AUC-ROC: 0.9762 ← MEJOR
+2026-04-27 09:43:11 | INFO     |   [4] regParam=0.100 | elasticNet=0.5 → AUC-ROC: 0.8998
+2026-04-27 09:43:11 | INFO     | 
+  Hiperparámetros finales: regParam=0.1, elasticNetParam=0.0
+2026-04-27 09:43:11 | INFO     | ============================================================
+2026-04-27 09:43:11 | INFO     | Mejor modelo seleccionado por Cross-Validation.
+2026-04-27 09:43:11 | INFO     | Guardando modelo en: /app/models/sentiment_model
+2026-04-27 09:43:16 | INFO     | Modelo guardado correctamente.
+2026-04-27 09:43:16 | INFO     |   Phase 3 completada en 69.8s
+
+2026-04-27 09:43:16 | INFO     | ▶ PHASE 4 — Evaluación y generación de reporte
+2026-04-27 09:43:16 | INFO     | Generando predicciones sobre el conjunto de test...
+2026-04-27 09:43:18 | INFO     | Predicciones generadas para 3,982 ejemplos de test.
+2026-04-27 09:43:18 | INFO     | Recolectando predicciones en el driver para calcular métricas...
+2026-04-27 09:43:21 | INFO     | Métricas guardadas en: /app/outputs/metrics.json
+2026-04-27 09:43:21 | INFO     | Matriz de confusión guardada en: /app/outputs/confusion_matrix.png
+2026-04-27 09:43:21 | INFO     | Curva ROC guardada en: /app/outputs/roc_curve.png
+2026-04-27 09:43:23 | INFO     | Distribución de probabilidades guardada en: /app/outputs/probability_distribution.png
+2026-04-27 09:43:23 | INFO     | 
+2026-04-27 09:43:23 | INFO     | ============================================================
+2026-04-27 09:43:23 | INFO     |   REPORTE FINAL — MODELO DE SENTIMIENTO
+2026-04-27 09:43:23 | INFO     | ============================================================
+2026-04-27 09:43:23 | INFO     |   Samples de test    : 3,982
+2026-04-27 09:43:23 | INFO     |   Positivos reales   : 1,122
+2026-04-27 09:43:23 | INFO     |   Negativos reales   : 2,860
+2026-04-27 09:43:23 | INFO     |   ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─
+2026-04-27 09:43:23 | INFO     |   Accuracy           : 0.9432  (94.3%)
+2026-04-27 09:43:23 | INFO     |   Precision          : 0.9308
+2026-04-27 09:43:23 | INFO     |   Recall             : 0.8627
+2026-04-27 09:43:23 | INFO     |   F1-Score           : 0.8955
+2026-04-27 09:43:23 | INFO     |   AUC-ROC            : 0.9774
+2026-04-27 09:43:23 | INFO     |   ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─
+2026-04-27 09:43:23 | INFO     |   Veredicto          : BUENO — Sólido para uso en producción
+2026-04-27 09:43:23 | INFO     | ============================================================
+2026-04-27 09:43:23 | INFO     |   Artefactos generados en /app/outputs/:
+2026-04-27 09:43:23 | INFO     |     · metrics.json
+2026-04-27 09:43:23 | INFO     |     · confusion_matrix.png
+2026-04-27 09:43:23 | INFO     |     · roc_curve.png
+2026-04-27 09:43:23 | INFO     |     · probability_distribution.png
+2026-04-27 09:43:23 | INFO     | ============================================================
+2026-04-27 09:43:23 | INFO     |   Phase 4 completada en 6.4s
+
+2026-04-27 09:43:23 | INFO     | ============================================================
+2026-04-27 09:43:23 | INFO     |   Pipeline completado en 88.5s (1.5 min)
+2026-04-27 09:43:23 | INFO     |   F1-Score final: 0.8955
+2026-04-27 09:43:23 | INFO     |   AUC-ROC final : 0.9774
+2026-04-27 09:43:23 | INFO     | ============================================================
+2026-04-27 09:43:23 | INFO     | 
+2026-04-27 09:43:23 | INFO     |   Artefactos disponibles en el host (directorio ./outputs/):
+2026-04-27 09:43:23 | INFO     |     · pipeline.log          → log completo de ejecución
+2026-04-27 09:43:23 | INFO     |     · metrics.json          → métricas del modelo
+2026-04-27 09:43:23 | INFO     |     · confusion_matrix.png  → matriz de confusión
+2026-04-27 09:43:23 | INFO     |     · roc_curve.png         → curva ROC
+2026-04-27 09:43:23 | INFO     |     · probability_distribution.png → calibración del modelo
+2026-04-27 09:43:23 | INFO     | 
+2026-04-27 09:43:23 | INFO     |   Modelo guardado en ./models/sentiment_model/
+2026-04-27 09:43:23 | INFO     | ============================================================
